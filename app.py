@@ -6,18 +6,28 @@ from dash import Dash, dcc, html, dash_table
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import timedelta
+from kaggle.api.kaggle_api_extended import KaggleApi
 import os
 
 app = Dash(__name__)
 server = app.server
 
-# set up directory to read data
-BASE_DIR = os.path.dirname(os.path.abspath("/Users/retail-dashboard/"))
+api= KaggleApi()
+api.authenticate()
 
-file_path = os.path.join(BASE_DIR, "data", "retail_sales.csv")
+# set up file path
+DATA_PATH = 'data'
+if not os.path.exists(DATA_PATH):
+    # download dataset only once
+    api.dataset_download_files(
+        "retail-sales.csv",
+        path=DATA_PATH,
+        unzip=True
+    )
 
-# read data
-retail_sales_df = pd.read_csv(file_path)
+#read csv file
+retail_sales_df = pd.reac_csv("retail_sales.csv")
+
 
 # change columns to their right data type
 retail_sales_df["date"] = pd.to_datetime(retail_sales_df['date'])
