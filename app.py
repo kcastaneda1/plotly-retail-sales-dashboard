@@ -20,7 +20,7 @@ DATA_PATH = 'data'
 if not os.path.exists(DATA_PATH):
     # download dataset only once
     api.dataset_download_files(
-        "retail-sales.csv",
+        "dhrubangtalukdar/store-item-demand-forecasting-dataset",
         path=DATA_PATH,
         unzip=True
     )
