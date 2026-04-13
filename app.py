@@ -15,6 +15,8 @@ server = app.server
 api= KaggleApi()
 api.authenticate()
 
+api.dataset_download_files("dhrubangtalukdar/store-item-demand-forecasting-dataset", path="./data")
+
 # set up file path
 DATA_PATH = 'data'
 if not os.path.exists(DATA_PATH):
