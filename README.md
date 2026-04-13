@@ -42,7 +42,7 @@ The dashboard is designed to simulate a real-world analytics tool used by busine
 ## 📂 Project Structure
 
 ```
-retail-dashboard/
+plotly-retail-dashboard/
 │
 ├── app.py
 ├── requirements.txt
@@ -57,8 +57,8 @@ retail-dashboard/
 ## ⚙️ Installation (Local)
 
 ```bash
-git clone https://github.com/yourusername/retail-sales-dashboard.git
-cd retail-sales-dashboard
+git clone https://github.com/kcastaneda1/plotly-retail-sales-dashboard.git
+cd plotly-retail-sales-dashboard
 pip install -r requirements.txt
 python app.py
 ```
