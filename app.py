@@ -6,49 +6,61 @@ from dash import Dash, dcc, html, dash_table
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import timedelta
-from kaggle.api.kaggle_api_extended import KaggleApi
 import os
 
 app = Dash(__name__)
 server = app.server
 
-api= KaggleApi()
-api.authenticate()
+cached_df = None
 
-# set up file path
-DATA_PATH = 'data'
-if not os.path.exists(DATA_PATH):
-    # download dataset only once
-    api.dataset_download_files(
-        "dhrubangtalukdar/store-item-demand-forecasting-dataset",
-        path=DATA_PATH,
-        unzip=True
-    )
+def get_clean_data():
+    global cached_df
 
-#read csv file
-retail_sales_df = pd.reac_csv("retail_sales.csv")
+    if cached_df is not None:
+        return cached_df 
+    
+    from kaggle.api.kaggle_api_extended import KaggleApi
+
+    file_path = "data/retail_sales.csv"
+
+    if not os.path.exists(file_path):
+        os.makedirs('data', exist_ok= True)
+
+        api= KaggleApi()
+        api.authenticate()
+
+        api.dataset_download_files(
+            "dhrubangtalukdar/store-item-demand-forecasting-dataset",
+            path="data",
+            unzip=True
+            )  
+    
+    #read csv file
+    df = pd.read_csv(file_path)
 
 
-# change columns to their right data type
-retail_sales_df["date"] = pd.to_datetime(retail_sales_df['date'])
+    # change columns to their right data type
+    df["date"] = pd.to_datetime(df['date'])
 
-# change object columns to numerical
-cols_to_num = ['sales','price','promo','weekday','month']
+    # change object columns to numerical
+    cols_to_num = ['sales','price','promo','weekday','month']
 
-retail_sales_df[cols_to_num] = retail_sales_df[cols_to_num].apply(pd.to_numeric, errors = 'coerce')
+    df[cols_to_num] = df[cols_to_num].apply(pd.to_numeric, errors = 'coerce')
 
-# change object columns to string
-retail_sales_df[['store_id', 'item_id']] = retail_sales_df[['store_id','item_id']].fillna("").astype(str)
+    # change object columns to string 
+    df[['store_id', 'item_id']] = df[['store_id','item_id']].fillna("").astype(str)
 
-# create a total sales column
-retail_sales_df['total_sales'] = retail_sales_df['sales'] * retail_sales_df['price']
+    # create a total sales column
+    df['total_sales'] = df['sales'] * df['price']
 
-# create a year column
-retail_sales_df['year'] = retail_sales_df['date'].dt.year
+    # create a year column
+    df['year'] = df['date'].dt.year
 
-grouped_sales = retail_sales_df.groupby(['date', 'store_id','item_id'])['total_sales'].sum().reset_index()
+    cached_df = df
+    return df
 
-stores = grouped_sales['store_id'].unique()
+#get data
+retail_sales_df = get_clean_data()
 
 KPI_STYLE = {
     "background": "linear-gradient(135deg, #1f2937, #111827)",
@@ -73,6 +85,9 @@ def style_figure(fig):
     )
     return fig
 
+stores = retail_sales_df['store_id'].unique()
+
+grouped_sales = retail_sales_df.groupby(['date', 'store_id','item_id'])['total_sales'].sum().reset_index()
 
 app.layout = html.Div([
     html.H1('Retail Sales Dashboard', 
@@ -195,7 +210,7 @@ app.layout = html.Div([
 
 ])
 
-
+# item dropdown
 @app.callback(
     Output('item-dropdown','options'),
     Output('item-dropdown', 'value'),
@@ -225,7 +240,6 @@ def update_dashboards(selected_store):
     
     return options, top_items
 
-
 @app.callback(
     Output('line-chart','figure'),
     Output('kpi-total-sales','children'),
@@ -246,15 +260,15 @@ def update_dashboards(selected_store):
 
 def update_graph(stores, selected_items,time_filter,start_date, end_date):
     # store filter
-    if isinstance(stores, str):
+    if isinstance(stores,str):
         stores = [stores]
         
     df_filtered_store = grouped_sales[grouped_sales['store_id'].isin(stores)]
-    
+        
     # item filter
     if selected_items:
         df_filtered = df_filtered_store[df_filtered_store['item_id'].isin(selected_items)]
-    
+            
         # determie date range
         max_date = df_filtered['date'].max()
             
@@ -269,7 +283,7 @@ def update_graph(stores, selected_items,time_filter,start_date, end_date):
             
         # fallack to manual range
         df_date_filter = df_filtered[(df_filtered['date'] >= start_date)&
-                                (df_filtered['date'] <= end_date)]
+                                         (df_filtered['date'] <= end_date)]
         
         
         df_grouped = (
@@ -345,7 +359,7 @@ def update_graph(stores, selected_items,time_filter,start_date, end_date):
             avg_sales='mean',
             max_sales='max',
             min_sales='min'
-        ).reset_index()
+            ).reset_index()
         )
         
         # Add ranking
@@ -379,7 +393,7 @@ def update_graph(stores, selected_items,time_filter,start_date, end_date):
                 html.H2(f"${avg_sales: ,.0f}")
             ], style = KPI_STYLE),
             html.Div([
-               html.P('Stores Selected'),
+                html.P('Stores Selected'),
                 html.H2(store_count)
             ], style = KPI_STYLE),
             html.Div([
@@ -393,7 +407,6 @@ def update_graph(stores, selected_items,time_filter,start_date, end_date):
             table_columns
         )
     
-
 # run app
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
